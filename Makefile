@@ -4,5 +4,8 @@ build:
 all: 
 	build
 
+test:
+	go test -v ./...
+
 clean: 
 	rm -rf bin

@@ -11,7 +11,7 @@ type HashArea struct{}
 // HashArea is a struct that describes a hashing system designed for speed
 type HashSpeed struct{}
 
-// Hash interface can implement MicroHashUcr function from any type that uses it
+// Hash interface can implement Sistema from any type that uses it
 type Hash interface {
-	MicroHashUcr(p Payload, n Nonce) Bounty
+	Sistema(inicio bool, target byte, p Payload) (Nonce, bool)
 }
