@@ -7,6 +7,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var payload []byte
+var target uint8
+
 var rootCmd = &cobra.Command{
 	Use:   "micro-ucr-hash",
 	Short: "micro-ucr-hash is a functional description of a Nonce generator following the Micro Hash Ucr hashing function.",

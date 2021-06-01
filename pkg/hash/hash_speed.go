@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 )
 
+var SpeedBounty Bounty
+
 // NextNonce takes current Nonce, converts it in its uint32 representation (4
 // bytes), increments it by one and returns the number's Nonce form.
 func (hs *HashSpeed) NextNonce(nonce Nonce) Nonce {
@@ -96,23 +98,26 @@ func (hs *HashSpeed) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) 
 	}
 
 	n := 6
-	channel := make(chan Nonce)
+	nonceChan := make(chan Nonce)
+	bountyChan := make(chan Bounty)
 
 	for i := 0; i < n; i++ {
 		nonceU32 := (4294967296 / n) * i
 		nonce := Uint32ToNonce(uint32(nonceU32))
-		go hs.sistema(target, nonce, p, channel)
+		go hs.sistema(target, nonce, p, nonceChan, bountyChan)
 	}
 
-	res := <-channel
+	res := <-nonceChan
+	SpeedBounty = <-bountyChan
 
 	return res, true
 }
 
 // sistema is the function called by the goroutines in System, it encompasses
 // nonce generation, hash creation and bounty checking. When a Nonce that meets
-// the bounty target is found it is returned through a go channel.
-func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, c chan Nonce) {
+// the bounty target is found it is returned through a go channel along with its
+// Bounty for further inspection.
+func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, cN chan Nonce, cB chan Bounty) {
 	nonce := initNonce
 	bloque := hs.Concatenate(p, nonce)
 	bounty := hs.MicroHashUcr(bloque)
@@ -125,8 +130,6 @@ func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, c chan Non
 		terminado = hs.CheckBounty(bounty, target)
 	}
 
-	//fmt.Println("Bounty:", bounty)
-	//fmt.Println("Nonce:", nonce)
-
-	c <- nonce
+	cN <- nonce
+	cB <- bounty
 }
