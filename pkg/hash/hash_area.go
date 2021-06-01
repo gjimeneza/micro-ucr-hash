@@ -84,15 +84,11 @@ func (ha *HashArea) MicroHashUcr(p Payload, n Nonce) Bounty {
 
 }
 
-<<<<<<< HEAD
-func (h *HashArea) ValidateBounty(target byte, bounty Bounty) int {
-=======
 func (ha *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
 	return Nonce{}, false
 }
 
 func (h *HashArea) ValidateBounty(target byte) {
->>>>>>> master
 
 	// Esta funcion valida si el bounty calculado esta dentro del target especificado
 

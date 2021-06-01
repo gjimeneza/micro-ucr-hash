@@ -15,30 +15,6 @@ func TestHashArea(t *testing.T) {
 	terminado := 0
 	ha := hash.HashArea{}
 
-<<<<<<< HEAD
-	i := 0
-
-	for (terminado == 0) && (i <= 1024) {
-
-		fmt.Printf("Entrada: [%# x]\n", testPayload[:]) // imprime el bounty obtenido
-		fmt.Printf("Nounce: [%# x]\n", testNonce[:])    // imprime el nounce utilizado
-		fmt.Printf("\n")                                // nueva linea
-
-		bounty = ha.MicroHashUcr(testPayload, testNonce) // obtiene el bounty
-		terminado = ha.ValidateBounty(10, bounty)        // verifica que sea un bounty correcto
-
-		if terminado == 0 {
-			ha.Next(&testNonce) // si no se ha terminado, calcular proximo nounce
-		}
-
-		i = i + 1
-
-	}
-
-	fmt.Printf("El proceso ha terminado.\n")
-	fmt.Printf("El bounty obtenido es: [%# x]\n", bounty[:]) // imprime el bounty obtenido
-
-=======
 	t.Logf("Generated Bounty: [%# x]\n", bounty[:])
 
 	nextNonce := ha.Next(&testNonce)
@@ -85,5 +61,4 @@ func TestHashSpeedMicroHashUcr(t *testing.T) {
 			t.Fatalf("Bounties are not equal, expected [%# x], got [%# x]", v, bounty)
 		}
 	}
->>>>>>> master
 }
