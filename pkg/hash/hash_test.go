@@ -8,17 +8,17 @@ import (
 )
 
 func TestHashArea(t *testing.T) {
-	testPayload := hash.Payload{0x39, 0x7d, 0x9f, 0x2f, 0x40, 0xca, 0x9e, 0x6c, 0x6b, 0x1f, 0x33, 0x24} // datos de entrada
-	testNonce := hash.Nonce{0x00, 0x00, 0x00, 0x00}                                                     // nonce de entrada, se inicializa en 0,0,0,0
+	testPayload := hash.Payload{0x39, 0x7d, 0x9f, 0x2f, 0x40, 0xca, 0x9e, 0x6c, 0x6b, 0x1f, 0x33, 0x24}
+	testTarget := byte(10)
 
-	var bounty hash.Bounty
-	terminado := 0
-	ha := hash.HashArea{}
+	hs := hash.HashArea{}
 
-	t.Logf("Generated Bounty: [%# x]\n", bounty[:])
+	start := time.Now()
+	nonce, _ := hs.Sistema(true, testTarget, testPayload)
+	duration := time.Since(start)
 
-	nextNonce := ha.Next(&testNonce)
-	t.Logf("Next Nonce: [%# x]\n", nextNonce[:])
+	t.Logf("Elapsed time: %v", duration)
+	t.Logf("Generated Nonce: [%# x]\n", nonce[:])
 }
 
 // TestHashSpeed checks System implementation and speed while obtaining a valid Nonce.
@@ -40,7 +40,7 @@ func TestHashSpeed(t *testing.T) {
 // if the generated bounty is correct using a predetermined Bloque - Bounty map
 // with correct values.
 func TestHashSpeedMicroHashUcr(t *testing.T) {
-	payloadBountyMap := map[hash.Bloque]hash.Bounty{
+	payloadBountyMap := map[hash.Bloque]hash.HashOutput{
 		{0x39, 0x7d, 0x9f, 0x2f, 0x40, 0xca, 0x9e, 0x6c, 0x6b, 0x1f, 0x33, 0x24, 0xfd, 0xed, 0x87, 0x3c}: {0xf1, 0x89, 0x73},
 		{0xed, 0x18, 0xbe, 0x0f, 0x98, 0x4a, 0xe0, 0xe2, 0xe3, 0x12, 0x8e, 0xfe, 0x0f, 0xa2, 0x34, 0x91}: {0x7a, 0x19, 0x6e},
 		{0x88, 0x55, 0xc7, 0xac, 0x8b, 0x73, 0xf8, 0xf2, 0x97, 0x01, 0xef, 0xf1, 0xba, 0x0f, 0x98, 0xb3}: {0x97, 0xe9, 0x57},
@@ -56,9 +56,9 @@ func TestHashSpeedMicroHashUcr(t *testing.T) {
 	hs := hash.HashSpeed{}
 
 	for k, v := range payloadBountyMap {
-		bounty := hs.MicroHashUcr(k)
-		if bounty != v {
-			t.Fatalf("Bounties are not equal, expected [%# x], got [%# x]", v, bounty)
+		hashOutput := hs.MicroHashUcr(k)
+		if hashOutput != v {
+			t.Fatalf("Bounties are not equal, expected [%# x], got [%# x]", v, hashOutput)
 		}
 	}
 }

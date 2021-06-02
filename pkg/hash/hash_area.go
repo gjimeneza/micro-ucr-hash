@@ -1,110 +1,120 @@
 package hash
 
-// Next trata de evitar un overflow
-// si se llega a 255 que se mantenga ahi
-// y siga contando con la siguiente posicion
-func (ha *HashArea) Next(nonce *Nonce) *Nonce {
+import (
+	"encoding/binary"
+	"fmt"
+)
 
-	// Comentario para Leo: nonce es un puntero de tipo Nonce
-	// En Go utilice punteros como si fueran datos normales, Go ahi ve como hace
-	// super facil!
+var AreaHashOutput HashOutput
 
-	if nonce[3] < 255 {
-		nonce[3] = nonce[3] + 1
+func (ha *HashArea) NextNonce(nonce Nonce) Nonce {
 
-	} else if nonce[2] < 255 {
-		nonce[2] = nonce[2] + 1
+	nonceU32 := binary.BigEndian.Uint32(nonce[:])
 
-	} else if nonce[1] < 255 {
-		nonce[1] = nonce[1] + 1
+	nonceU32++
 
-	} else if nonce[0] < 255 {
-		nonce[0] = nonce[0] + 1
+	binary.BigEndian.PutUint32(nonce[:], nonceU32)
 
-	}
 	return nonce
 }
 
-func (ha *HashArea) MicroHashUcr(p Payload, n Nonce) Bounty {
-	bloc := Bloque{}
+func (h *HashArea) Concatenador(p Payload, n Nonce) Bloque {
+	bloque := Bloque{}
+
+	// Concatenacion del nonce y el array de uint32s de entrada
+	copy(bloque[:], p[:])       // de la posicion 0 - 12 los bytes de entrada
+	copy(bloque[len(p):], n[:]) // de la posicion 12-16 el nonce
+
+	return bloque
+}
+
+func (ha *HashArea) MicroHashUcr(bloque Bloque) HashOutput {
 	w := make([]byte, 32)
 
-	// Concatenacion del nonce y el array de bytes de entrada
-	copy(bloc[:], p[:])       // de la posicion 0 - 12 los bytes de entrada
-	copy(bloc[len(p):], n[:]) // de la posicion 12-16 el nonce
-
+	// Proceso principal
 	for i := 0; i <= 15; i++ {
-		w[i] = bloc[i]
+		w[i] = bloque[i]
 	}
 	for i := 16; i <= 31; i++ {
 		w[i] = w[i-3] | (w[i-9] ^ w[i-14])
 	}
 
 	h := [3]byte{0x01, 0x89, 0xfe}
+	a := h[0]
+	b := h[1]
+	c := h[2]
 
-	var k byte
-	var x byte
+	for i := 0; i < 32; i++ {
+		var (
+			k byte
+			x byte
+		)
 
-	var a byte = h[0]
-	var b byte = h[1]
-	var c byte = h[2]
-
-	for i := 0; i <= 31; i++ {
-
-		// var a byte = h[0]
-		// var b byte = h[1]
-		// var c byte = h[2]
-
-		if i <= 0 && i <= 16 {
+		if i <= 16 {
 			k = 0x99
-			x = (a ^ b) & 0xFF
-		} else if i <= 17 && i <= 31 {
+			x = a ^ b
+		} else {
 			k = 0xa1
-			x = (a | b) & 0xFF
+			x = a | b
 		}
 
-		a = (b ^ c) & 0xFF
-		b = (c << 4) & 0xFF
-		c = (x + k + w[i]) & 0xFF
-
-		// if i == 31 {
-		// 	h[0] = h[0] + a
-		// 	h[1] = h[1] + b
-		// 	h[2] = h[2] + c
-		// }
-
+		a = b ^ c
+		b = c << 4
+		c = x + k + w[i]
 	}
 
-	h[0] = (h[0] + a) & 0xFF
-	h[1] = (h[1] + b) & 0xFF
-	h[2] = (h[2] + c) & 0xFF
+	h[0] = h[0] + a
+	h[1] = h[1] + b
+	h[2] = h[2] + c
 
-	// Casteo a tipo de bounty
-	return Bounty(h)
+	return HashOutput(h)
 
 }
 
-func (ha *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
-	return Nonce{}, false
-}
+func (h *HashArea) ValidateOutput(target byte, hashOutput HashOutput) bool {
 
-func (h *HashArea) ValidateBounty(target byte) {
+	// Esta funcion valida si el hashOutput calculado esta dentro del target especificado
 
-	// Esta funcion valida si el bounty calculado esta dentro del target especificado
-
-	var valid int  // define el valido
-	var valido int // retorno
-	valid = 0
-
-	if bounty[0] < target && bounty[1] < target {
-		valid = 1
-
-	} else {
-		valid = 0
+	if (hashOutput[0] < target) && (hashOutput[1] < target) {
+		return true
 	}
 
-	valido = valid
+	return false
 
-	return valido
+}
 
+func (hs *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
+
+	if !inicio {
+		return Nonce{}, false
+	}
+
+	// default Nonce{0x00, 0x00, 0x00, 0x00}
+	// bloque 1 Nonce{0xfd, 0xed, 0x87, 0x3c}
+	// bloque 2 Nonce{0x0f, 0xa2, 0x34, 0x91}
+
+	return hs.sistemaIntern(target, Nonce{0x00, 0x00, 0x00, 0x00}, p)
+}
+
+func (hs *HashArea) sistemaIntern(target byte, initNonce Nonce, p Payload) (Nonce, bool) {
+
+	nonce := initNonce
+	bloque := hs.Concatenador(p, nonce)
+	hashOutput := hs.MicroHashUcr(bloque)
+	fmt.Printf("hashOutput: [%# x]\n", hashOutput[:]) // para probar hashOutputs
+	terminado := hs.ValidateOutput(target, hashOutput)
+
+	for !terminado {
+
+		nonce = hs.NextNonce(nonce)
+		//fmt.Printf("Nonce: [%# x]\n", nonce[:])
+		bloque = hs.Concatenador(p, nonce)
+		hashOutput = hs.MicroHashUcr(bloque)
+		terminado = hs.ValidateOutput(target, hashOutput)
+
+	}
+
+	AreaHashOutput = hashOutput
+
+	return nonce, true
 }

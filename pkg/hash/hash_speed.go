@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-var SpeedBounty Bounty
+var SpeedBounty HashOutput
 
 // NextNonce takes current Nonce, converts it in its uint32 representation (4
 // bytes), increments it by one and returns the number's Nonce form.
@@ -28,8 +28,8 @@ func (hs *HashSpeed) Concatenate(p Payload, n Nonce) Bloque {
 }
 
 // MicroHashUcr is the main hashing function, it takes a Bloque (16 bytes),
-// makes some predefined bitwise operations and returns a Bounty (3 bytes)
-func (hs *HashSpeed) MicroHashUcr(bloque Bloque) Bounty {
+// makes some predefined bitwise operations and returns a HashOutput (3 bytes)
+func (hs *HashSpeed) MicroHashUcr(bloque Bloque) HashOutput {
 	w := make([]byte, 32)
 
 	for i := 0; i <= 15; i++ {
@@ -67,13 +67,13 @@ func (hs *HashSpeed) MicroHashUcr(bloque Bloque) Bounty {
 	h[1] = h[1] + b
 	h[2] = h[2] + c
 
-	return Bounty(h)
+	return HashOutput(h)
 }
 
 // CheckBounty takes a Bounty (3 bytes) a target (1 byte) and returns true if the
 // first two bytes (Little Endian) are below the Target.
-func (hs *HashSpeed) CheckBounty(bounty Bounty, target byte) bool {
-	if (bounty[0] < target) && (bounty[1] < target) {
+func (hs *HashSpeed) CheckHashOutput(hashOutput HashOutput, target byte) bool {
+	if (hashOutput[0] < target) && (hashOutput[1] < target) {
 		return true
 	}
 
@@ -99,16 +99,16 @@ func (hs *HashSpeed) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) 
 
 	n := 6
 	nonceChan := make(chan Nonce)
-	bountyChan := make(chan Bounty)
+	hashOutputChan := make(chan HashOutput)
 
 	for i := 0; i < n; i++ {
 		nonceU32 := (4294967296 / n) * i
 		nonce := Uint32ToNonce(uint32(nonceU32))
-		go hs.sistema(target, nonce, p, nonceChan, bountyChan)
+		go hs.sistema(target, nonce, p, nonceChan, hashOutputChan)
 	}
 
 	res := <-nonceChan
-	SpeedBounty = <-bountyChan
+	SpeedBounty = <-hashOutputChan
 
 	return res, true
 }
@@ -117,19 +117,19 @@ func (hs *HashSpeed) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) 
 // nonce generation, hash creation and bounty checking. When a Nonce that meets
 // the bounty target is found it is returned through a go channel along with its
 // Bounty for further inspection.
-func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, cN chan Nonce, cB chan Bounty) {
+func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, cN chan Nonce, cB chan HashOutput) {
 	nonce := initNonce
 	bloque := hs.Concatenate(p, nonce)
-	bounty := hs.MicroHashUcr(bloque)
-	terminado := hs.CheckBounty(bounty, target)
+	hashOutput := hs.MicroHashUcr(bloque)
+	terminado := hs.CheckHashOutput(hashOutput, target)
 
 	for !terminado {
 		nonce = hs.NextNonce(nonce)
 		bloque = hs.Concatenate(p, nonce)
-		bounty = hs.MicroHashUcr(bloque)
-		terminado = hs.CheckBounty(bounty, target)
+		hashOutput = hs.MicroHashUcr(bloque)
+		terminado = hs.CheckHashOutput(hashOutput, target)
 	}
 
 	cN <- nonce
-	cB <- bounty
+	cB <- hashOutput
 }

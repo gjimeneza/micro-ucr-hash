@@ -15,7 +15,8 @@ var areaCmd = &cobra.Command{
 It takes a payload and target and generates a valid nonce.
 
 Example usage:
-	 ./micro-ucr-hash area -p 397d9f2f40ca9e6c6b1f3324fd -t 10`,
+	 ./micro-ucr-hash area -p 397d9f2f40ca9e6c6b1f3324 -t 10
+	 ./micro-ucr-hash area -p ed18be0f984ae0e2e3128efe -t 10`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Entered payload: [%# x]\n", payload)
 		fmt.Printf("Desired target: %v\n", target)
@@ -30,7 +31,7 @@ Example usage:
 		duration := time.Since(start)
 
 		fmt.Printf("Elapsed time: %v\n", duration)
-		fmt.Printf("Generated Bounty: [%# x]\n", hash.Bounty{})
+		fmt.Printf("Generated Bounty: [%# x]\n", hash.AreaHashOutput[:])
 		fmt.Printf("Generated Nonce: [%# x]\n", nonce[:])
 	},
 }

@@ -1,6 +1,6 @@
 package hash
 
-type Bounty [3]byte
+type HashOutput [3]byte
 type Nonce [4]byte
 type Payload [12]byte
 type Bloque [16]byte
