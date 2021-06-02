@@ -2,11 +2,12 @@ package hash
 
 import (
 	"encoding/binary"
-	"fmt"
 )
 
 var AreaHashOutput HashOutput
 
+// NextNonce takes current Nonce, converts it in its uint32 representation (4
+// bytes), increments it by one and returns the number's Nonce form.
 func (ha *HashArea) NextNonce(nonce Nonce) Nonce {
 
 	nonceU32 := binary.BigEndian.Uint32(nonce[:])
@@ -18,6 +19,8 @@ func (ha *HashArea) NextNonce(nonce Nonce) Nonce {
 	return nonce
 }
 
+// Concatenate takes a payload (12 bytes) and a Nonce (4 bytes) and concatenates them into
+// a Bloque (16 bytes)
 func (h *HashArea) Concatenador(p Payload, n Nonce) Bloque {
 	bloque := Bloque{}
 
@@ -101,13 +104,11 @@ func (hs *HashArea) sistemaIntern(target byte, initNonce Nonce, p Payload) (Nonc
 	nonce := initNonce
 	bloque := hs.Concatenador(p, nonce)
 	hashOutput := hs.MicroHashUcr(bloque)
-	fmt.Printf("hashOutput: [%# x]\n", hashOutput[:]) // para probar hashOutputs
 	terminado := hs.ValidateOutput(target, hashOutput)
 
 	for !terminado {
 
 		nonce = hs.NextNonce(nonce)
-		//fmt.Printf("Nonce: [%# x]\n", nonce[:])
 		bloque = hs.Concatenador(p, nonce)
 		hashOutput = hs.MicroHashUcr(bloque)
 		terminado = hs.ValidateOutput(target, hashOutput)
