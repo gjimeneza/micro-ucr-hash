@@ -1,59 +1,64 @@
 package hash
 
-// Next trata de evitar un overflow
-// si se llega a 255 que se mantenga ahi
-// y siga contando con la siguiente posicion
-func (ha *HashArea) Next(nonce *Nonce) *Nonce {
+import (
+	"encoding/binary"
+)
 
-	// Comentario para Leo: nonce es un puntero de tipo Nonce
-	// En Go utilice punteros como si fueran datos normales, Go ahi ve como hace
-	// super facil!
+var AreaHashOutput HashOutput // to return final HashOutput
 
-	if nonce[3] < 255 {
-		nonce[3] = nonce[3] + 1
+// NextNonce takes current Nonce, converts it in its uint32 representation (4
+// bytes), increments it by one and returns the number's Nonce form.
+func (ha *HashArea) NextNonce(nonce Nonce) Nonce {
 
-	} else if nonce[2] < 255 {
-		nonce[2] = nonce[2] + 1
+	nonceU32 := binary.BigEndian.Uint32(nonce[:])
 
-	} else if nonce[1] < 255 {
-		nonce[1] = nonce[1] + 1
+	nonceU32++
 
-	} else if nonce[0] < 255 {
-		nonce[0] = nonce[0] + 1
+	binary.BigEndian.PutUint32(nonce[:], nonceU32)
 
-	}
 	return nonce
 }
 
-func (ha *HashArea) MicroHashUcr(p Payload, n Nonce) Bounty {
-	b := Bloque{}
+// Concatenate takes a payload (12 bytes) and a Nonce (4 bytes) and concatenates them into
+// a Bloque (16 bytes)
+func (h *HashArea) Concatenador(p Payload, n Nonce) Bloque {
+	bloque := Bloque{}
+
+	// Concatenacion del nonce y el array de uint32s de entrada
+	copy(bloque[:], p[:])       // de la posicion 0 - 12 los bytes de entrada
+	copy(bloque[len(p):], n[:]) // de la posicion 12-16 el nonce
+
+	return bloque
+}
+
+// MicroHashUcr is the main hashing function, it takes a Bloque (16 bytes),
+// makes some predefined bitwise operations and returns a HashOutput (3 bytes)
+func (ha *HashArea) MicroHashUcr(bloque Bloque) HashOutput {
 	w := make([]byte, 32)
 
-	// Concatenacion del nonce y el array de bytes de entrada
-	copy(b[:], p[:])       // de la posicion 0 - 12 los bytes de entrada
-	copy(b[len(p):], n[:]) // de la posicion 12-16 el nonce
-
+	// Proceso principal
 	for i := 0; i <= 15; i++ {
-		w[i] = b[i]
+		w[i] = bloque[i]
 	}
 	for i := 16; i <= 31; i++ {
-		w[i] = w[i-3] | w[i-9] ^ w[i-14]
+		w[i] = w[i-3] | (w[i-9] ^ w[i-14])
 	}
 
 	h := [3]byte{0x01, 0x89, 0xfe}
+	a := h[0]
+	b := h[1]
+	c := h[2]
 
-	var k byte
-	var x byte
-	for i := 0; i <= 31; i++ {
+	for i := 0; i < 32; i++ {
+		var (
+			k byte
+			x byte
+		)
 
-		var a byte = h[0]
-		var b byte = h[1]
-		var c byte = h[2]
-
-		if i <= 0 && i <= 16 {
+		if i <= 16 {
 			k = 0x99
 			x = a ^ b
-		} else if i <= 17 && i <= 31 {
+		} else {
 			k = 0xa1
 			x = a | b
 		}
@@ -61,26 +66,67 @@ func (ha *HashArea) MicroHashUcr(p Payload, n Nonce) Bounty {
 		a = b ^ c
 		b = c << 4
 		c = x + k + w[i]
+	}
 
-		if i == 31 {
-			h[0] = h[0] + a
-			h[1] = h[1] + b
-			h[2] = h[2] + c
-		}
+	h[0] = h[0] + a
+	h[1] = h[1] + b
+	h[2] = h[2] + c
+
+	return HashOutput(h)
+
+}
+
+// ValidateOutput takes a HashOutput (3 bytes) a target (1 byte) and returns true if the
+// first two bytes (Little Endian) are below the Target.
+func (h *HashArea) ValidateOutput(target byte, hashOutput HashOutput) bool {
+
+	// Esta funcion valida si el hashOutput calculado esta dentro del target especificado
+
+	if (hashOutput[0] < target) && (hashOutput[1] < target) {
+		return true
+	}
+
+	return false
+
+}
+
+// Sistema is the main system that encompasses nonce generation, hash creation
+// and HashOutput checking. It receives a signal to start (inicio), a target (1
+// byte) and a Payload (12 bytes) and returns the first Nonce that meets the
+// target requirements according to the HashOutput returned by the hashing function.
+//
+// It is implemented in a way to use the least amount of modules in order to reduce
+// the area needed to produce an integrated circuit
+func (hs *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
+
+	if !inicio {
+		return Nonce{}, false
+	}
+
+	return hs.sistemaIntern(target, Nonce{0x00, 0x00, 0x00, 0x00}, p)
+}
+
+// sistemaIntern is the function called by the goroutines in System, it encompasses
+// nonce generation, hash creation and HashOutput checking. When a Nonce that meets
+// the HashOutput target is found it is returned through a go channel along with its
+// HashOutput for further inspection.
+func (hs *HashArea) sistemaIntern(target byte, initNonce Nonce, p Payload) (Nonce, bool) {
+
+	nonce := initNonce
+	bloque := hs.Concatenador(p, nonce)
+	hashOutput := hs.MicroHashUcr(bloque)
+	terminado := hs.ValidateOutput(target, hashOutput)
+
+	for !terminado {
+
+		nonce = hs.NextNonce(nonce)
+		bloque = hs.Concatenador(p, nonce)
+		hashOutput = hs.MicroHashUcr(bloque)
+		terminado = hs.ValidateOutput(target, hashOutput)
 
 	}
 
-	// Casteo a tipo de bounty
-	return Bounty(h)
+	AreaHashOutput = hashOutput
 
-}
-
-func (ha *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
-	return Nonce{}, false
-}
-
-func (h *HashArea) ValidateBounty(target byte) {
-
-	// Esta funcion valida si el bounty calculado esta dentro del target especificado
-
+	return nonce, true
 }

@@ -34,7 +34,7 @@ Example usage:
 		duration := time.Since(start)
 
 		fmt.Printf("Elapsed time: %v\n", duration)
-		fmt.Printf("Generated Bounty: [%# x]\n", hash.SpeedBounty[:])
+		fmt.Printf("Generated HashOutput: [%# x]\n", hash.SpeedHashOutput[:])
 		fmt.Printf("Generated Nonce: [%# x]\n", nonce[:])
 	},
 }
