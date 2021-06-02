@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-var AreaHashOutput HashOutput
+var AreaHashOutput HashOutput // to return final HashOutput
 
 // NextNonce takes current Nonce, converts it in its uint32 representation (4
 // bytes), increments it by one and returns the number's Nonce form.
@@ -31,6 +31,8 @@ func (h *HashArea) Concatenador(p Payload, n Nonce) Bloque {
 	return bloque
 }
 
+// MicroHashUcr is the main hashing function, it takes a Bloque (16 bytes),
+// makes some predefined bitwise operations and returns a HashOutput (3 bytes)
 func (ha *HashArea) MicroHashUcr(bloque Bloque) HashOutput {
 	w := make([]byte, 32)
 
@@ -74,6 +76,8 @@ func (ha *HashArea) MicroHashUcr(bloque Bloque) HashOutput {
 
 }
 
+// ValidateOutput takes a HashOutput (3 bytes) a target (1 byte) and returns true if the
+// first two bytes (Little Endian) are below the Target.
 func (h *HashArea) ValidateOutput(target byte, hashOutput HashOutput) bool {
 
 	// Esta funcion valida si el hashOutput calculado esta dentro del target especificado
@@ -86,19 +90,26 @@ func (h *HashArea) ValidateOutput(target byte, hashOutput HashOutput) bool {
 
 }
 
+// Sistema is the main system that encompasses nonce generation, hash creation
+// and HashOutput checking. It receives a signal to start (inicio), a target (1
+// byte) and a Payload (12 bytes) and returns the first Nonce that meets the
+// target requirements according to the HashOutput returned by the hashing function.
+//
+// It is implemented in a way to use the least amount of modules in order to reduce
+// the area needed to produce an integrated circuit
 func (hs *HashArea) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
 
 	if !inicio {
 		return Nonce{}, false
 	}
 
-	// default Nonce{0x00, 0x00, 0x00, 0x00}
-	// bloque 1 Nonce{0xfd, 0xed, 0x87, 0x3c}
-	// bloque 2 Nonce{0x0f, 0xa2, 0x34, 0x91}
-
 	return hs.sistemaIntern(target, Nonce{0x00, 0x00, 0x00, 0x00}, p)
 }
 
+// sistemaIntern is the function called by the goroutines in System, it encompasses
+// nonce generation, hash creation and HashOutput checking. When a Nonce that meets
+// the HashOutput target is found it is returned through a go channel along with its
+// HashOutput for further inspection.
 func (hs *HashArea) sistemaIntern(target byte, initNonce Nonce, p Payload) (Nonce, bool) {
 
 	nonce := initNonce

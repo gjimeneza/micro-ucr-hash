@@ -70,7 +70,7 @@ func (hs *HashSpeed) MicroHashUcr(bloque Bloque) HashOutput {
 	return HashOutput(h)
 }
 
-// CheckBounty takes a Bounty (3 bytes) a target (1 byte) and returns true if the
+// CheckBounty takes a HashOutput (3 bytes) a target (1 byte) and returns true if the
 // first two bytes (Little Endian) are below the Target.
 func (hs *HashSpeed) CheckHashOutput(hashOutput HashOutput, target byte) bool {
 	if (hashOutput[0] < target) && (hashOutput[1] < target) {
@@ -81,15 +81,15 @@ func (hs *HashSpeed) CheckHashOutput(hashOutput HashOutput, target byte) bool {
 }
 
 // Sistema is the main system that encompasses nonce generation, hash creation
-// and bounty checking. It receives a signal to start (inicio), a target (1
+// and HashOutput checking. It receives a signal to start (inicio), a target (1
 // byte) and a Payload (12 bytes) and returns the first Nonce that meets the
-// target requirements according to the Bounty returned by the hashing function.
+// target requirements according to the HashOutput returned by the hashing function.
 // It is implemented concurrently using goroutines to simulate parallelization
 // in a real integrated circuit.
 //
 // The system divides the total possible Nonces in n goroutines that each start
-// in a different Nonce and starts checking Bounties from there. The first
-// goroutine that obtains a valid Bounty, returns the Nonce through a Go channel
+// in a different Nonce and starts checking HashOutputs from there. The first
+// goroutine that obtains a valid HashOutput, returns the Nonce through a Go channel
 // which in turn closes it for the rest of the goroutines. Finally, this Nonce
 // is returned.
 func (hs *HashSpeed) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) {
@@ -114,9 +114,9 @@ func (hs *HashSpeed) Sistema(inicio bool, target byte, p Payload) (Nonce, bool) 
 }
 
 // sistema is the function called by the goroutines in System, it encompasses
-// nonce generation, hash creation and bounty checking. When a Nonce that meets
-// the bounty target is found it is returned through a go channel along with its
-// Bounty for further inspection.
+// nonce generation, hash creation and HashOutput checking. When a Nonce that meets
+// the HashOutput target is found it is returned through a go channel along with its
+// HashOutput for further inspection.
 func (hs *HashSpeed) sistema(target byte, initNonce Nonce, p Payload, cN chan Nonce, cB chan HashOutput) {
 	nonce := initNonce
 	bloque := hs.Concatenate(p, nonce)
