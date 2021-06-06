@@ -40,14 +40,24 @@ Run with:
 micro-ucr-hash
 ```
 ## Usage
-For bounty/nonce generation from a given 12 byte payload and target focused on area reduction, run:
+For bounty/nonce generation from a given 12 byte payload and target focused on area reduction:
+
+Syntax:
 ```
 ./micro-ucr-hash area -p <hex payload> -t <target>
+```
+Example:
+```
 ./micro-ucr-hash area -p ed18be0f984ae0e2e3128efe -t 10
 ```
 
-For bounty/nonce generation from a given 12 byte payload and target focused on speed, run:
+For bounty/nonce generation from a given 12 byte payload and target focused on speed:
+
+Syntax:
 ```
 ./micro-ucr-hash speed -p <hex payload> -t <target>
+```
+Example:
+```
 ./micro-ucr-hash speed -p ed18be0f984ae0e2e3128efe -t 10
 ```
